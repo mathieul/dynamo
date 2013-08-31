@@ -168,6 +168,17 @@ defmodule Dynamo.Cowboy.Connection do
     )
   end
 
+  @doc false
+  def upgrade_to_websocket(handler, connection(state: state) = conn)
+      when state in [:unset, :set] do
+    connection(req: req) = conn
+    connection(conn,
+      req: R.set_meta(:websocket_handler, handler, req),
+      resp_body: nil,
+      state: :sent
+    )
+  end
+
   ## Misc
 
   @doc false

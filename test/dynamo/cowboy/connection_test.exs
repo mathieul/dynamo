@@ -422,6 +422,19 @@ defmodule Dynamo.Cowboy.ConnectionTest do
     assert { 302, _, "Redirected" } = request :get, "/resp"
   end
 
+  def upgrade_to_websocket(conn) do
+    conn = conn.upgrade_to_websocket Dynamo.Cowboy.ConnectionTest.WebsocketHandler
+
+    { mod, _req } = :cowboy_req.meta(:websocket_handler, conn.cowboy_request)
+    assert mod == Dynamo.Cowboy.ConnectionTest.WebsocketHandler
+    assert conn.state == :sent
+    assert nil?(conn.resp_body)
+  end
+
+  test :upgrade_to_websocket do
+    assert_success request :get, "/upgrade_to_websocket"
+  end
+
   ## Misc
 
   def conn_inspect(conn) do
@@ -494,4 +507,12 @@ defmodule Dynamo.Cowboy.ConnectionTest do
     { :ok, body, _ } = :hackney.body(client)
     { status, headers, body }
   end
+end
+
+defmodule Dynamo.Cowboy.ConnectionTest.WebsocketHandler do
+  @behaviour :cowboy_websocket_handler
+  def websocket_init(_transport_name, req, _opts), do: { :ok, req, :undefined_state }
+  def websocket_handle(_data, req, state), do: { :ok, req, state}
+  def websocket_info(_data, req, state), do: { :ok, req, state }
+  def websocket_terminate(_reason, _req, state), do: :ok
 end
