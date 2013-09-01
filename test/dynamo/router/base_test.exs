@@ -61,11 +61,14 @@ defmodule Dynamo.Router.BaseTest do
     end
   end
 
+
   defmodule RootSample do
     use Dynamo.Router
 
     prepare do: conn.fetch(:params)
 
+    defmodule WebsocketHandler1 do; end
+    websocket "/ws", using: WebsocketHandler1
     forward "/", to: Sample1
   end
 
@@ -173,5 +176,10 @@ defmodule Dynamo.Router.BaseTest do
     assert conn.assigns[:value] == :root
     assert conn.route_params[:var] == "hello"
     assert conn.params[:var] == "hello"
+  end
+
+  test "forwarding to a websocket handler" do
+    conn = get("/ws")
+    assert conn.websocket_handler == RootSample.WebsocketHandler1
   end
 end
