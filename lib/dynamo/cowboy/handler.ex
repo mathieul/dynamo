@@ -17,7 +17,7 @@ defmodule Dynamo.Cowboy.Handler do
     { websocket_handler, _req } = R.meta(:websocket_handler, conn.cowboy_request)
     cond do
       websocket_handler != :undefined ->
-        { :upgrade, :protocol, :cowboy_websocket, conn.cowboy_request, [] }
+        { :upgrade, :protocol, :cowboy_websocket, conn.cowboy_request, conn }
       is_record(conn, Dynamo.Cowboy.Connection) ->
         { :ok, conn.cowboy_request, nil }
       true ->
