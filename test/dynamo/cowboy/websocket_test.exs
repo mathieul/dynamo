@@ -17,9 +17,15 @@ defmodule Dynamo.Cowboy.WebsocketTest do
       end
       { :ok, req, :undefined_state }
     end
-    def websocket_info({ :send_text, message }, req, state), do: { :reply, { :text, message }, req, state }
+    def websocket_info({ :send_text, message }, req, state) do
+      # IO.puts "SERVER: info { :send_text, #{inspect message} }"
+      { :reply, { :text, message }, req, state }
+    end
     def websocket_info(_data, req, state), do: { :ok, req, state }
-    def websocket_handle( { :text, message }, req, state), do: { :reply, {:text, message }, req, state }
+    def websocket_handle( { :text, message }, req, state) do
+      # IO.puts "SERVER: handle { :text, #{inspect message} }"
+      { :reply, {:text, "server: #{message}" }, req, state }
+    end
     def websocket_handle(_data, req, state), do: { :ok, req, state}
     def websocket_terminate(_reason, _req, _state), do: :ok
   end
@@ -41,12 +47,14 @@ defmodule Dynamo.Cowboy.WebsocketTest do
       { :ok, pid }
     end
     def websocket_handle({ :text, message }, _conn_state, pid) do
+      # IO.puts "CLIENT: handle { :text, #{inspect message} }"
       pid <- { :ws_text_received, message }
       { :ok, pid }
     end
     def websocket_handle(_data, _conn_state, state), do: { :ok, state }
-    def websocket_info({ :send_text, message }, _conn_state, state) do
-      { :reply, { :text, message }, state }
+    def websocket_info({ :send_text, message }, _conn_state, pid) do
+      # IO.puts "CLIENT: info { :send_text, #{inspect message} }"
+      { :reply, { :text, message }, pid }
     end
     def websocket_info(_data, _conn_state, state), do: { :ok, state }
     def websocket_terminate(_reason, _conn_state, _state), do: :ok
@@ -79,7 +87,7 @@ defmodule Dynamo.Cowboy.WebsocketTest do
     wait_for(:ws_initialized)
     client <- { :send_text, "hello there" }
     message = wait_for(:ws_text_received, "client did not receive message sent")
-    assert message == "hello there"
+    assert message == "server: hello there"
   end
 
   defp wait_for(expected, error // "message was not received as expected") do
