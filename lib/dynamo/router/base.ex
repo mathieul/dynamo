@@ -281,6 +281,32 @@ defmodule Dynamo.Router.Base do
   end
 
   @doc """
+  Request to upgrade the connection to a websocket and forward the given route
+  to the specified websocket handler module.
+
+  ## Examples
+
+      websocket "/pubsub", using: MyApp.Pubsub
+
+  The websocket handler module should have the :cowboy_websocket_handler
+  behaviour and implement all necessary websocket_xxx callbacks as described
+  in the [Cowboy User Guide](http://ninenines.eu/docs/en/cowboy/HEAD/guide/ws_handlers).
+  """
+  defmacro websocket(path, options) do
+    mod = Keyword.get(options, :using, nil)
+
+    unless mod, do: raise(ArgumentError, message: "Expected using option to websocket")
+
+    block = quote do
+      handler = unquote(mod)
+      var!(conn).upgrade_to_websocket handler, [ conn: var!(conn) ]
+    end
+
+    options = Keyword.put(options, :do, block)
+    compile(:generate_match, path, Keyword.merge(options, via: :get))
+  end
+
+  @doc """
   Dispatches to the path only if it is get request.
   See `match/3` for more examples.
   """
