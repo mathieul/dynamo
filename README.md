@@ -216,6 +216,58 @@ Finally, in the `ApplicationRouter` above, notice we fetch cookies and the reque
 
 This forwarding mechanism makes it very easy to split and organize your code into its logical sections while also having control on which features are required by each router.
 
+### Websockets
+
+Websocket is an IETF standard that allows the web server and clients to communicate asynchronously at any
+time. You can implement websocket connection handlers by leveraging the powerful Cowboy websocket handler
+behaviour. And from your Dynamo routers you can just forward to those handlers.
+
+First implement a Cowboy Websocket handler as described in the
+[Cowboy User Guide](http://ninenines.eu/docs/en/cowboy/HEAD/guide/ws_handlers):
+
+```elixir
+defmodule MyApp.WebsocketHandler do
+  @behaviour :cowboy_websocket_handler
+  def websocket_init(_transport_name, req, [ conn: conn ]), do: { :ok, req, conn.params }
+  def websocket_handle(_data, req, params), do: { :ok, req, params}
+  def websocket_info(_data, req, params), do: { :ok, req, params }
+  def websocket_terminate(_reason, _req, _state), do: :ok
+end
+```
+
+And instruct the Dynamo router to forward a path to a websocket handler:
+
+```elixir
+defmodule ApplicationRouter do
+  use Dynamo.Router
+
+  websocket "/websocket", using: MyApp.WebsocketHandler
+end
+```
+
+The websocket request to `/websocket` will be handled by `MyApp.WebsocketHandler`.
+The last parameter of the handler `websocket_init` function is the initial state,
+set from the Dynamo router. By default it is set to the keyword list `[ conn: conn ]`
+where `conn` is the Dynamo connection. You can use it to access the connection state
+such as the parameters.
+
+You can also customize this initial state keyword list by explicitely upgrading
+a HTTP connection to a websocket:
+
+```elixir
+defmodule PostsRouter do
+  use Dynamo.Router
+
+  get "/pubsub/:room_id" do
+    conn.upgrade_to_websocket MyApp.PubsubHandler, [ room: conn.params[:room_id] ]
+  end
+end
+```
+
+In this example a request to `/posts/pubsub/ou812` will be handled by the websocket handler
+`MyApp.PubsubHandler` and the initial state passed to `websocket_init` will be
+`[ room: "ou812" ]`.
+
 ## Connection
 
 The connection plays a huge part when building Dynamos. As we have seen above, each route has access to the connection as the **variable** `conn`. The `authenticate_user` prepare hook defined above also receives the connection as an argument:
