@@ -21,8 +21,9 @@ defmodule Dynamo.Connection.Test do
   """
 
   use Dynamo.Connection.Behaviour,
-    [ :query_string, :raw_req_headers, :raw_req_body, :raw_req_cookies, :fetched,
-      :path, :path_segments, :sent_body, :original_method, :scheme, :port ]
+    [ :query_string, :raw_req_headers, :raw_req_body, :raw_req_cookies,
+      :fetched, :path, :path_segments, :sent_body, :original_method,
+      :scheme, :port, :websocket_handler, :websocket_init ]
 
   @doc """
   Initializes a connection to be used in tests.
@@ -143,6 +144,17 @@ defmodule Dynamo.Connection.Test do
       state: :sent,
       sent_body: check_sent_body(conn, File.read!(path)),
       resp_body: nil
+    )
+  end
+
+  @doc false
+  def upgrade_to_websocket(handler, init, connection(state: state) = conn)
+      when state in [:unset, :set] do
+    connection(conn,
+      websocket_handler: handler,
+      websocket_init: init,
+      resp_body: nil,
+      state: :sent
     )
   end
 
@@ -287,6 +299,20 @@ defmodule Dynamo.Connection.Test do
   """
   def fetched(connection(fetched: fetched)) do
     fetched
+  end
+
+  @doc """
+  Returns websocket handler possibly set during a request.
+  """
+  def websocket_handler(connection(websocket_handler: websocket_handler)) do
+    websocket_handler
+  end
+
+  @doc """
+  Returns websocket init possibly set during a request.
+  """
+  def websocket_init(connection(websocket_init: websocket_init)) do
+    websocket_init
   end
 
   @doc """

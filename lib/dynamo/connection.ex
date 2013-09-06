@@ -314,6 +314,12 @@ defmodule Dynamo.Connection do
   defcallback sendfile(status, path :: binary, conn) :: conn
 
   @doc """
+  Request to upgrade the connection to a websocket connection.
+  The module is a cowboy websocket handler.
+  """
+  defcallback upgrade_to_websocket(module, Keyword.t, conn) :: conn
+
+  @doc """
   Returns the response state. It can be:
 
   * `:unset` - the response was not configured yet

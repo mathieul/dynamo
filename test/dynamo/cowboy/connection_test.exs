@@ -422,6 +422,29 @@ defmodule Dynamo.Cowboy.ConnectionTest do
     assert { 302, _, "Redirected" } = request :get, "/resp"
   end
 
+  def upgrade_to_websocket(conn) do
+    conn = conn.upgrade_to_websocket Dynamo.Cowboy.ConnectionTest.WebsocketHandler, [ state: "test" ]
+
+    { mod, _req } = :cowboy_req.meta(:websocket_handler, conn.cowboy_request)
+    assert mod == Dynamo.Cowboy.ConnectionTest.WebsocketHandler
+    { init, _req } = :cowboy_req.meta(:websocket_init, conn.cowboy_request)
+    assert init == [ state: "test" ]
+
+    conn
+  end
+
+  test :upgrade_to_websocket do
+    Dynamo.Cowboy.ConnectionTest.WebsocketClient.start_link(
+      'ws://127.0.0.1:8011/upgrade_to_websocket',
+      self
+    )
+    receive do
+      :websocket_init_received -> assert true
+    after
+      500 -> assert false, "websocket client was not initialized as expected"
+    end
+  end
+
   ## Misc
 
   def conn_inspect(conn) do
@@ -494,4 +517,24 @@ defmodule Dynamo.Cowboy.ConnectionTest do
     { :ok, body, _ } = :hackney.body(client)
     { status, headers, body }
   end
+end
+
+defmodule Dynamo.Cowboy.ConnectionTest.WebsocketHandler do
+  @behaviour :cowboy_websocket_handler
+  def websocket_init(_transport_name, req, _opts), do: { :ok, req, :undefined_state }
+  def websocket_handle(_data, req, state), do: { :ok, req, state}
+  def websocket_info(_data, req, state), do: { :ok, req, state }
+  def websocket_terminate(_reason, _req, _state), do: :ok
+end
+
+defmodule Dynamo.Cowboy.ConnectionTest.WebsocketClient do
+  @behaviour :websocket_client_handler
+  def start_link(url, pid), do: :websocket_client.start_link(url, __MODULE__, [pid])
+  def init([pid], _conn_state) do
+    pid <- :websocket_init_received
+    { :ok, :undefined_state }
+  end
+  def websocket_handle(_data, _conn_state, state), do: { :ok, state }
+  def websocket_info(_data, _conn_state, state), do: { :ok, state }
+  def websocket_terminate(_reason, _conn_state, _state), do: :ok
 end
