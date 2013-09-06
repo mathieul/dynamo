@@ -22,6 +22,7 @@ defmodule Dynamo.Mixfile do
   def deps(_) do
     deps(:prod) ++
       [ { :hackney, github: "benoitc/hackney" },
+        { :websocket_client, github: "jeremyong/websocket_client" },
         { :cowboy,  github: "extend/cowboy" } ]
   end
 
